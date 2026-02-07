@@ -1,0 +1,65 @@
+services:
+  pivot:
+    image: ubuntu:22.04
+    container_name: pivot
+    hostname: pivot
+    networks:
+      external_net:
+        ipv4_address: 172.26.0.10
+      internal_net:
+        ipv4_address: 192.168.50.2
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y openssh-server openssh-client &&
+        mkdir -p /var/run/sshd &&
+        useradd -m -s /bin/bash pivotuser &&
+        echo 'pivotuser:PivotPass123' | chpasswd &&
+        sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config &&
+        echo 'GatewayPorts yes' >> /etc/ssh/sshd_config &&
+        ssh-keygen -A &&
+        /usr/sbin/sshd -D
+      "
+    tty: true
+    stdin_open: true
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    build:
+      context: .
+      dockerfile: Dockerfile.mysql
+    container_name: mysql
+    hostname: mysql
+    networks:
+      internal_net:
+        ipv4_address: 192.168.50.10
+    environment:
+      MYSQL_ROOT_PASSWORD: MySQLRootPass123
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pMySQLRootPass123"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+networks:
+  external_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.26.0.0/24
+          gateway: 172.26.0.1
+  internal_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.50.0/24
+          gateway: 192.168.50.1
